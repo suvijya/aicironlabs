@@ -34,7 +34,7 @@ function parseInlineStyles(text: string): React.ReactNode[] {
     if (matchText.startsWith("**") && matchText.endsWith("**")) {
       const boldVal = matchText.substring(2, matchText.length - 2);
       parts.push(
-        <strong key={`bold-${keyIdx++}`} className="font-semibold text-foreground font-display">
+        <strong key={`bold-${keyIdx++}`} className="font-semibold text-gray-900 dark:text-white font-display">
           {boldVal}
         </strong>
       );
@@ -43,7 +43,7 @@ function parseInlineStyles(text: string): React.ReactNode[] {
       parts.push(
         <code
           key={`code-${keyIdx++}`}
-          className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-indigo-400 border border-border"
+          className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-violet-500 dark:text-violet-400 border border-border"
         >
           {codeVal}
         </code>
@@ -74,7 +74,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     // 2. Headings
     if (line.startsWith("# ")) {
       elements.push(
-        <h1 key={i} className="text-2xl font-bold font-display text-foreground mt-6 mb-3 border-b border-border pb-1">
+        <h1 key={i} className="text-2xl font-bold font-display text-gray-900 dark:text-white mt-6 mb-3 border-b border-border pb-1">
           {parseInlineStyles(line.substring(2))}
         </h1>
       );
@@ -83,7 +83,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     }
     if (line.startsWith("## ")) {
       elements.push(
-        <h2 key={i} className="text-xl font-bold font-display text-foreground mt-5 mb-2.5">
+        <h2 key={i} className="text-xl font-bold font-display text-gray-900 dark:text-white mt-5 mb-2.5">
           {parseInlineStyles(line.substring(3))}
         </h2>
       );
@@ -92,7 +92,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     }
     if (line.startsWith("### ")) {
       elements.push(
-        <h3 key={i} className="text-lg font-semibold font-display text-indigo-400 mt-4 mb-2">
+        <h3 key={i} className="text-lg font-semibold font-display text-violet-600 dark:text-violet-400 mt-4 mb-2">
           {parseInlineStyles(line.substring(4))}
         </h3>
       );
@@ -101,7 +101,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     }
     if (line.startsWith("#### ")) {
       elements.push(
-        <h4 key={i} className="text-base font-semibold font-display text-zinc-100 mt-3 mb-1.5">
+        <h4 key={i} className="text-base font-semibold font-display text-gray-800 dark:text-zinc-200 mt-3 mb-1.5">
           {parseInlineStyles(line.substring(5))}
         </h4>
       );
@@ -110,7 +110,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     }
     if (line.startsWith("##### ")) {
       elements.push(
-        <h5 key={i} className="text-sm font-semibold font-display text-zinc-300 mt-2 mb-1">
+        <h5 key={i} className="text-sm font-semibold font-display text-gray-700 dark:text-zinc-300 mt-2 mb-1">
           {parseInlineStyles(line.substring(6))}
         </h5>
       );
@@ -126,7 +126,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         i++;
       }
       elements.push(
-        <ul key={`list-${i}`} className="list-disc list-outside pl-5 mb-4 space-y-1.5 text-zinc-300">
+        <ul key={`list-${i}`} className="list-disc list-outside pl-5 mb-4 space-y-1.5 text-gray-700 dark:text-zinc-300">
           {listItems.map((item, idx) => (
             <li key={idx} className="text-sm leading-relaxed">
               {parseInlineStyles(item)}
@@ -172,7 +172,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         elements.push(
           <div key={`table-wrapper-${i}`} className="w-full my-5 overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left border-collapse text-sm">
-              <thead className="bg-muted/60 text-zinc-200 uppercase text-xs font-mono border-b border-border">
+              <thead className="bg-muted/60 text-gray-500 dark:text-zinc-400 uppercase text-xs font-mono border-b border-border">
                 <tr>
                   {headers.map((h, idx) => {
                     const align = alignments[idx] || "left";
@@ -188,9 +188,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                   })}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50 text-zinc-300">
+              <tbody className="divide-y divide-border/50 text-gray-700 dark:text-zinc-300">
                 {dataRows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="hover:bg-zinc-800/20 transition-colors">
+                  <tr key={rowIdx} className="hover:bg-violet-50/20 dark:hover:bg-zinc-800/20 transition-colors">
                     {row.map((cell, cellIdx) => {
                       const align = alignments[cellIdx] || "left";
                       // Bold rows that have double stars in headers/values or start with bold values
@@ -199,7 +199,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
                       return (
                         <td
                           key={cellIdx}
-                          className={`px-4 py-3 font-sz-sm ${isBold ? "font-semibold text-foreground" : ""}`}
+                          className={`px-4 py-3 font-sz-sm ${isBold ? "font-semibold text-gray-900 dark:text-white" : ""}`}
                           style={{ textAlign: align as any }}
                         >
                           {parseInlineStyles(cellContent)}
@@ -218,7 +218,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
 
     // 5. Paragraphs fallback
     elements.push(
-      <p key={i} className="text-zinc-300 text-sm leading-relaxed mb-4">
+      <p key={i} className="text-gray-700 dark:text-zinc-300 text-sm leading-relaxed mb-4">
         {parseInlineStyles(line)}
       </p>
     );

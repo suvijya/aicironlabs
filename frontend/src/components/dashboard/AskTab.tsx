@@ -132,8 +132,12 @@ export const AskTab: React.FC = () => {
           {/* 3D Mascot placeholder */}
           <div className="mb-6 mascot-glow select-none">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-violet-200 to-indigo-200 dark:from-violet-900/40 dark:to-indigo-900/40 flex items-center justify-center shadow-xl shadow-violet-200/60 dark:shadow-violet-900/40">
-                <span className="text-6xl">🤖</span>
+              <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-violet-200 to-indigo-200 dark:from-violet-900/40 dark:to-indigo-900/40 flex items-center justify-center shadow-xl shadow-violet-200/60 dark:shadow-violet-900/40">
+                <img
+                  src="/mascot.png"
+                  alt="AI Assistant Mascot"
+                  className="w-full h-full object-cover scale-105"
+                />
               </div>
               {/* Glow ring */}
               <div className="absolute inset-0 rounded-full bg-violet-400/20 blur-xl -z-10 scale-110" />
