@@ -4,10 +4,13 @@ import json
 import os
 import re
 
-MODEL = "qwen/qwen3.5-9b"
-MAX_STEPS = 6
+# Xiaomi MiMo — OpenAI-compatible API
+# Docs: https://mimo.mi.com/docs/en-US/quick-start/first-api-call
+MODEL = "mimo-v2.5"           # fast; swap to "mimo-v2-pro" for best quality
+OPENROUTER_BASE_URL = "https://token-plan-sgp.xiaomimimo.com/v1"
+MAX_STEPS = 1
 CONCURRENT_REQUESTS = 5
-DEPENDENCIES = []
+DEPENDENCIES = ["openai"]
 
 SYSTEM_PROMPT = (
     "You are an expert financial analyst and investment banker with deep expertise in "
@@ -22,32 +25,6 @@ SYSTEM_PROMPT = (
     "- For qualitative analysis, name the specific line items or disclosures cited\n"
     "- Always end with a direct conclusion that answers the question asked"
 )
-
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "calculate",
-            "description": (
-                "Evaluate a mathematical expression and return the exact numeric result. "
-                "Use for CAGR, basis points, EV multiples, IRR, MOIC, percentage changes, "
-                "and any other financial arithmetic. "
-                "Supports: + - * / ** // % abs() round() min() max() sum() pow() int() float(). "
-                "Example: (2865507/1905871)**(1/2)-1"
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "expression": {
-                        "type": "string",
-                        "description": "A mathematical expression string to evaluate.",
-                    }
-                },
-                "required": ["expression"],
-            },
-        },
-    }
-]
 
 # ── Training data for few-shot prompting ─────────────────────────────────────
 
@@ -123,9 +100,9 @@ def _safe_calculate(expression: str) -> str:
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 if not (isinstance(node.func, ast.Name) and node.func.id in _ALLOWED_FUNCS):
-                    return f"Error: function not allowed"
+                    return "Error: function not allowed"
             elif not isinstance(node, _ALLOWED_NODES):
-                return f"Error: unsupported operation"
+                return "Error: unsupported operation"
         result = eval(compile(tree, "<calc>", "eval"))  # noqa: S307 — whitelist-validated
         return str(result)
     except ZeroDivisionError:
@@ -134,68 +111,97 @@ def _safe_calculate(expression: str) -> str:
         return f"Error: {exc}"
 
 
-# ── Agentic loop ──────────────────────────────────────────────────────────────
+# ── Agentic loop with tool calling ───────────────────────────────────────────
 
-def _format_legacy_prompt(user_prompt: str) -> str:
-    """Format system + user message into a single prompt string for the legacy API."""
-    return f"{SYSTEM_PROMPT}\n\nUser: {user_prompt}\n\nAssistant:"
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "calculate",
+            "description": (
+                "Evaluate a mathematical expression and return the exact numeric result. "
+                "Use for CAGR, basis points, EV multiples, IRR, MOIC, percentage changes. "
+                "Supports: + - * / ** // % abs() round() min() max() sum() pow() int() float(). "
+                "Example: (2865507/1905871)**(1/2)-1"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {"type": "string", "description": "Math expression to evaluate."}
+                },
+                "required": ["expression"],
+            },
+        },
+    }
+]
 
 
-async def _call_plain(client, prompt: str) -> str:
-    """Legacy completions call — hits /completions endpoint."""
+async def _call(client, inp: str) -> str:
+    prompt = _build_prompt(inp)
     try:
-        response = await client.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL,
-            prompt=_format_legacy_prompt(prompt),
-            max_tokens=4096,
             temperature=0,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
         )
-        return (response.choices[0].text or "").strip()
+        return (response.choices[0].message.content or "").strip() or "unknown"
     except Exception as exc:
         import sys
-        print(f"[ERROR] API call failed: {exc}", file=sys.stderr)
+        print(f"[ERROR] {exc}", file=sys.stderr)
         return "unknown"
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-
 async def run_batch(inputs: list[str], api_key: str) -> list[str]:
-
     if not api_key:
         import sys
-        print("[ERROR] No API key found. Set IRONAAI_API_KEY or IronLabs_API_KEY env var.", file=sys.stderr)
+        print("[ERROR] No API key. Set MIMO_API_KEY in .env", file=sys.stderr)
         return ["unknown"] * len(inputs)
 
     train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "train.json")
     _load_train(train_path)
 
     from openai import AsyncOpenAI
-    client = AsyncOpenAI(
-        api_key=api_key,
-        base_url="https://chat.ironlabs.ai/api/v1/slm",
-    )
+    client = AsyncOpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL)
 
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
-    async def _call(inp: str) -> str:
+    async def _bounded(inp: str) -> str:
         async with semaphore:
-            prompt = _build_prompt(inp)
-            return await _call_plain(client, prompt)
+            return await _call(client, inp)
 
-    return list(await asyncio.gather(*(_call(inp) for inp in inputs)))
+    return list(await asyncio.gather(*(_bounded(inp) for inp in inputs)))
+
+
+def _load_env(path: str = ".env") -> None:
+    """Load key=value pairs from a .env file into os.environ."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    dotenv = os.path.join(here, path)
+    if not os.path.exists(dotenv):
+        return
+    with open(dotenv) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
 
 
 if __name__ == "__main__":
     import sys
 
-    inputs_file = sys.argv[1]
+    _load_env()
+
+    inputs_file = sys.argv[1] if len(sys.argv) > 1 else "test.json"
     with open(inputs_file) as f:
         raw = json.load(f)
 
-    # test.json contains [{"input": "..."}] dicts
     inputs = [item["input"] if isinstance(item, dict) else item for item in raw]
-
-    api_key = os.environ.get("IRONAAI_API_KEY") or os.environ.get("IronLabs_API_KEY", "")
+    api_key = os.environ.get("MIMO_API_KEY") or os.environ.get("OPENROUTER_API_KEY", "")
     predictions = asyncio.run(run_batch(inputs, api_key))
     print(json.dumps(predictions))
