@@ -296,6 +296,25 @@ export const AskTab: React.FC = () => {
         </div>
       )}
 
+      {/* ── AGENT STATE BADGE ── */}
+      <div className="px-4 md:px-8 pb-2 flex justify-between items-center select-none text-[11px] font-sans">
+        <span className="text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5">
+          {config.useLiveAgent ? (
+            <>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50" />
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                ⚡ Live Agent Active (agent2.py)
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-indigo-400" />
+              <span>Simulated Client Engine</span>
+            </>
+          )}
+        </span>
+      </div>
+
       {/* ── CHIP SHORTCUTS ── */}
       <div className="px-4 md:px-8 pb-2 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
         {CHIPS.map(({ label, icon: Icon }) => (

@@ -312,7 +312,7 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
     case "LOAD_PERSISTED_STATE":
       return {
         ...state,
-        config: action.payload.config || state.config,
+        config: action.payload.config ? { ...DEFAULT_CONFIG, ...action.payload.config } : state.config,
         theme: action.payload.config?.theme || state.theme,
         sidebarOpen: action.payload.config ? action.payload.config.sidebarDefaultOpen : state.sidebarOpen,
         history: action.payload.history || state.history,
