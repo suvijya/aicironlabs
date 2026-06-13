@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useDashboard, DashboardConfig } from "@/context/DashboardContext";
 import { Card, Button, Toggle, Slider, Textarea } from "@/components/ui";
-import { Settings, User, Sliders, Layout, RotateCcw, AlertTriangle, Save, Eye } from "lucide-react";
+import { Settings, User, Sliders, Layout, RotateCcw, AlertTriangle, Save, Eye, Zap } from "lucide-react";
 
 export const ConfigTab: React.FC = () => {
   const { state, dispatch } = useDashboard();
@@ -40,6 +40,39 @@ export const ConfigTab: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* 0. Live Agent Settings */}
+      <Card hoverGlow={false} className="border-border/60 bg-card/45 backdrop-blur-md space-y-4">
+        <h3 className="text-base font-semibold font-display text-foreground flex items-center gap-2 border-b border-border/40 pb-3 select-none">
+          <Zap className="h-4.5 w-4.5 text-indigo-500" />
+          <span>Python Execution Settings</span>
+        </h3>
+        
+        <div className="flex items-center justify-between">
+          <div className="select-none space-y-1">
+            <label htmlFor="agent2-toggle" className="text-sm font-semibold text-gray-700 dark:text-zinc-300 font-display">
+              Enable Live Python Agent (agent2.py)
+            </label>
+            <p className="text-xs text-muted-foreground font-sans">
+              Queries will run locally via <code>agent2.py</code> instead of the simulated browser engine.
+            </p>
+          </div>
+          <Toggle
+            id="agent2-toggle"
+            checked={config.useLiveAgent}
+            onChange={(checked) => {
+              updateConfigValue("useLiveAgent", checked);
+              dispatch({
+                type: "ADD_TOAST",
+                payload: {
+                  type: "success",
+                  message: checked ? "Live local Python execution enabled!" : "Mock simulation engine enabled."
+                }
+              });
+            }}
+          />
+        </div>
+      </Card>
+
       {/* 1. AI Persona configuration */}
       <Card hoverGlow={false} className="border-border/60 bg-card/45 backdrop-blur-md space-y-4">
         <h3 className="text-base font-semibold font-display text-foreground flex items-center gap-2 border-b border-border/40 pb-3 select-none">

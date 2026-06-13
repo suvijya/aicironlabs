@@ -97,28 +97,48 @@ export const BatchTab: React.FC = () => {
         payload: { id: currentItem.id, updates: { status: "processing" } },
       });
 
-      // Simulate step latency
-      const stepDelay = Math.round(config.delayMs * 0.6 + (Math.random() * 200 - 100)); // slightly faster for batch
-      await new Promise((resolve) => setTimeout(resolve, stepDelay));
-
-      const isError = currentItem.input.toLowerCase().includes("error") || currentItem.input.toLowerCase().includes("fail");
-      
       const startTime = performance.now();
       let answer = "";
       let score = 0;
       let status: "success" | "error" = "success";
 
-      if (isError) {
-        answer = "### [API Error]\nSimulated execution failed for batch item due to invalid context trigger.";
-        score = 0;
-        status = "error";
+      if (config.useLiveAgent) {
+        try {
+          const response = await fetch("/api/run-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: currentItem.input }),
+          });
+          const data = await response.json();
+          if (response.ok && data.answer) {
+            answer = data.answer;
+            score = 100;
+          } else {
+            answer = `### Agent 2 Error\n${data.error || "Failed to get response from Agent 2."}`;
+            status = "error";
+          }
+        } catch (err: any) {
+          answer = `### Connection Error\nCould not reach the local agent API: ${err.message}`;
+          status = "error";
+        }
       } else {
-        const res = generateMockResponse(currentItem.input, config.persona, config.systemPrompt, config.qualityScore);
-        answer = res.answer;
-        score = res.score;
+        // Simulate step delay for mock engine
+        const stepDelay = Math.round(config.delayMs * 0.6 + (Math.random() * 200 - 100)); // slightly faster for batch
+        await new Promise((resolve) => setTimeout(resolve, stepDelay));
+
+        const isError = currentItem.input.toLowerCase().includes("error") || currentItem.input.toLowerCase().includes("fail");
+        if (isError) {
+          answer = "### [API Error]\nSimulated execution failed for batch item due to invalid context trigger.";
+          score = 0;
+          status = "error";
+        } else {
+          const res = generateMockResponse(currentItem.input, config.persona, config.systemPrompt, config.qualityScore);
+          answer = res.answer;
+          score = res.score;
+        }
       }
 
-      const latency = Math.round(performance.now() - startTime + stepDelay);
+      const latency = Math.round(performance.now() - startTime);
 
       dispatch({
         type: "UPDATE_BATCH_ITEM",
@@ -144,7 +164,7 @@ export const BatchTab: React.FC = () => {
           latency,
           score,
           status,
-          persona: config.persona,
+          persona: config.useLiveAgent ? "agent2" : config.persona,
         },
       });
 
@@ -167,23 +187,47 @@ export const BatchTab: React.FC = () => {
       payload: { id, updates: { status: "processing" } },
     });
 
-    const stepDelay = config.delayMs;
-    await new Promise((resolve) => setTimeout(resolve, stepDelay));
-
-    const isError = itemToRetry.input.toLowerCase().includes("error") || itemToRetry.input.toLowerCase().includes("fail");
+    const startTime = performance.now();
     let answer = "";
     let score = 0;
     let status: "success" | "error" = "success";
 
-    if (isError) {
-      answer = "### [API Error]\nSimulated execution failed for batch item.";
-      score = 0;
-      status = "error";
+    if (config.useLiveAgent) {
+      try {
+        const response = await fetch("/api/run-agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: itemToRetry.input }),
+        });
+        const data = await response.json();
+        if (response.ok && data.answer) {
+          answer = data.answer;
+          score = 100;
+        } else {
+          answer = `### Agent 2 Error\n${data.error || "Failed to get response from Agent 2."}`;
+          status = "error";
+        }
+      } catch (err: any) {
+        answer = `### Connection Error\nCould not reach the local agent API: ${err.message}`;
+        status = "error";
+      }
     } else {
-      const res = generateMockResponse(itemToRetry.input, config.persona, config.systemPrompt, config.qualityScore);
-      answer = res.answer;
-      score = res.score;
+      const stepDelay = config.delayMs;
+      await new Promise((resolve) => setTimeout(resolve, stepDelay));
+
+      const isError = itemToRetry.input.toLowerCase().includes("error") || itemToRetry.input.toLowerCase().includes("fail");
+      if (isError) {
+        answer = "### [API Error]\nSimulated execution failed for batch item.";
+        score = 0;
+        status = "error";
+      } else {
+        const res = generateMockResponse(itemToRetry.input, config.persona, config.systemPrompt, config.qualityScore);
+        answer = res.answer;
+        score = res.score;
+      }
     }
+
+    const latency = Math.round(performance.now() - startTime);
 
     dispatch({
       type: "UPDATE_BATCH_ITEM",
@@ -192,7 +236,7 @@ export const BatchTab: React.FC = () => {
         updates: {
           answer,
           score,
-          latency: stepDelay + 100,
+          latency,
           status,
         },
       },

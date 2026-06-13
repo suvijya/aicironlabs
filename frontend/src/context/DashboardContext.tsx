@@ -44,6 +44,7 @@ export interface DashboardConfig {
   systemPrompt: string;
   delayMs: number;
   qualityScore: number;
+  useLiveAgent: boolean;
 }
 
 export interface DashboardMetrics {
@@ -107,7 +108,8 @@ const DEFAULT_CONFIG: DashboardConfig = {
   persona: "analyst",
   systemPrompt: DEFAULT_SYSTEM_PROMPTS.analyst,
   delayMs: 1500,
-  qualityScore: 92
+  qualityScore: 92,
+  useLiveAgent: false
 };
 
 const DEFAULT_METRICS: DashboardMetrics = {

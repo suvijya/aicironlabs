@@ -64,25 +64,47 @@ export const AskTab: React.FC = () => {
     setMessages(prev => [...prev, { role: "user", content: question }]);
     setLoading(true);
 
-    const delay = config.delayMs + Math.random() * 400 - 200;
-    await new Promise(r => setTimeout(r, Math.max(500, delay)));
-
-    const isError = question.toLowerCase().includes("error") || question.toLowerCase().includes("fail");
+    const startTime = Date.now();
     let aiContent = "";
     let score = 0;
     let status: "success" | "error" = "success";
 
-    if (isError) {
-      aiContent = "### Connection Error\nSimulated API timeout. Please check your network and retry.";
-      score = 0;
-      status = "error";
+    if (config.useLiveAgent) {
+      try {
+        const response = await fetch("/api/run-agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: question }),
+        });
+        const data = await response.json();
+        if (response.ok && data.answer) {
+          aiContent = data.answer;
+          // Give live execution responses a perfect 100 quality score baseline or parse/grade
+          score = 100;
+        } else {
+          aiContent = `### Agent 2 Error\n${data.error || "Failed to get response from Agent 2."}`;
+          status = "error";
+        }
+      } catch (err: any) {
+        aiContent = `### Connection Error\nCould not reach the local agent API: ${err.message}`;
+        status = "error";
+      }
     } else {
-      const res = generateMockResponse(question, config.persona, config.systemPrompt, config.qualityScore);
-      aiContent = res.answer;
-      score = res.score;
+      const delay = config.delayMs + Math.random() * 400 - 200;
+      await new Promise(r => setTimeout(r, Math.max(500, delay)));
+
+      const isError = question.toLowerCase().includes("error") || question.toLowerCase().includes("fail");
+      if (isError) {
+        aiContent = "### Connection Error\nSimulated API timeout. Please check your network and retry.";
+        status = "error";
+      } else {
+        const res = generateMockResponse(question, config.persona, config.systemPrompt, config.qualityScore);
+        aiContent = res.answer;
+        score = res.score;
+      }
     }
 
-    const latency = Math.round(delay);
+    const latency = Math.round(Date.now() - startTime);
     const histItem: HistoryItem = {
       id: Math.random().toString(36).substring(2, 10),
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
@@ -91,7 +113,7 @@ export const AskTab: React.FC = () => {
       latency,
       score,
       status,
-      persona: config.persona,
+      persona: config.useLiveAgent ? "agent2" : config.persona,
     };
 
     dispatch({ type: "ADD_HISTORY_ITEM", payload: histItem });
